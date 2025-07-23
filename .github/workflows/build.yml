@@ -1,35 +1,209 @@
-name: build
+name: Build Executables
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
 
 jobs:
-  build:
+
+  # Build Windows EXE with CPU-only support
+  build-windows:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repositório
-        uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+    - name: Install dependencies
+      run: |
+        pip install .
+        pip install pyinstaller
+        pip install "numpy==1.21.0"
+        pip install torch==2.3.1 --extra-index-url https://download.pytorch.org/whl/cpu
 
-      - name: Configurar Java (opcional, se necessário)
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    - name: Build
+      run: |
+        pip install Babel==2.11.0
+        python scripts/compile_locales.py
+        python -m PyInstaller -n "libretranslate" main.py
 
-      - name: Build (adicione o comando correto aqui)
-        run: |
-          echo Simulando build...
-          mkdir dist
-          echo "Exemplo" > dist/README.txt
+    - name: Copy files
+      run: |
+        xcopy .\libretranslate\locales\ .\dist\libretranslate\_internal\libretranslate\locales\ /E /C /Y
+        xcopy .\libretranslate\static\ .\dist\libretranslate\_internal\libretranslate\static\ /E /C /Y
+        xcopy .\libretranslate\templates\ .\dist\libretranslate\_internal\libretranslate\templates\ /E /C /Y
 
-      - name: Criar arquivo ZIP
-        run: Compress-Archive -Path dist -DestinationPath libretranslate-windows.zip
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: 'Windows Artifacts (CPU)'
+        path: 'dist/libretranslate/'
 
-      - name: Upload artefato
-        uses: actions/upload-artifact@v3
-        with:
-          name: libretranslate-windows
-          path: libretranslate-windows.zip
+  # Build Windows EXE with CUDA support
+  build-windows-cuda:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+    - name: Install dependencies
+      run: |
+        pip install .
+        pip install pyinstaller
+        pip install "numpy==1.21.0"
+        pip install torch==2.3.1+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+
+    - name: Build
+      run: |
+        pip install Babel==2.11.0
+        python scripts/compile_locales.py
+        python -m PyInstaller -n "libretranslate_cuda" main.py
+
+    - name: Copy files
+      run: |
+        xcopy .\libretranslate\locales\ .\dist\libretranslate_cuda\_internal\libretranslate\locales\ /E /C /Y
+        xcopy .\libretranslate\static\ .\dist\libretranslate_cuda\_internal\libretranslate\static\ /E /C /Y
+        xcopy .\libretranslate\templates\ .\dist\libretranslate_cuda\_internal\libretranslate\templates\ /E /C /Y
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: 'Windows Artifacts (CUDA)'
+        path: 'dist/libretranslate_cuda/'
+
+  # Build MacOS file
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+    - name: Install dependencies
+      run: |
+        pip install .
+        pip install pyinstaller
+        pip install "numpy==1.21.0"
+        pip install torch==2.3.1 --extra-index-url https://download.pytorch.org/whl/cpu
+
+    - name: Build
+      run: |
+        pip install Babel==2.11.0
+        python scripts/compile_locales.py
+        python -m PyInstaller -n "libretranslate" main.py
+
+    - name: Copy files
+      run: |
+        mkdir -p ./dist/libretranslate/_internal/libretranslate/locales/
+        cp -R ./libretranslate/locales/ ./dist/libretranslate/_internal/libretranslate/locales/
+        mkdir -p ./dist/libretranslate/_internal/libretranslate/static/
+        cp -R ./libretranslate/static/ ./dist/libretranslate/_internal/libretranslate/static/
+        mkdir -p ./dist/libretranslate/_internal/libretranslate/templates/
+        cp -R ./libretranslate/templates/ ./dist/libretranslate/_internal/libretranslate/templates/
+        chmod 777 ./dist/libretranslate/libretranslate
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: 'MacOS Artifacts (CPU)'
+        path: 'dist/libretranslate/'
+
+  # Build Linux file with CPU-only support
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+    - name: Install dependencies
+      run: |
+        pip install .
+        pip install pyinstaller
+        pip install "numpy==1.21.0"
+        pip install torch==2.3.1 --extra-index-url https://download.pytorch.org/whl/cpu
+
+    - name: Build
+      run: |
+        pip install Babel==2.11.0
+        python scripts/compile_locales.py
+        python -m PyInstaller -n "libretranslate" main.py
+
+    - name: Copy files
+      run: |
+        mkdir -p ./dist/libretranslate/_internal/libretranslate/locales/
+        cp -r ./libretranslate/locales/ ./dist/libretranslate/_internal/libretranslate/locales/
+        mkdir -p ./dist/libretranslate/_internal/libretranslate/static/
+        cp -r ./libretranslate/static/ ./dist/libretranslate/_internal/libretranslate/static/
+        mkdir -p ./dist/libretranslate/_internal/libretranslate/templates/
+        cp -r ./libretranslate/templates/ ./dist/libretranslate/_internal/libretranslate/templates/
+        chmod 777 ./dist/libretranslate/libretranslate
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: 'Linux Artifacts (CPU)'
+        path: 'dist/libretranslate/'
+
+  # Build Linux file with CUDA support
+  build-linux-cuda:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+    - name: Install dependencies
+      run: |
+        pip install .
+        pip install pyinstaller
+        pip install "numpy==1.21.0"
+        pip install torch==2.3.1+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+
+    - name: Free Disk Space (Ubuntu)
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: false
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
+
+    - name: Build
+      run: |
+        pip install Babel==2.11.0
+        python scripts/compile_locales.py
+        python -m PyInstaller -n "libretranslate_cuda" main.py
+
+    - name: Copy files
+      run: |
+        mkdir -p ./dist/libretranslate_cuda/_internal/libretranslate/locales/
+        cp -r ./libretranslate/locales/ ./dist/libretranslate_cuda/_internal/libretranslate/locales/
+        mkdir -p ./dist/libretranslate_cuda/_internal/libretranslate/static/
+        cp -r ./libretranslate/static/ ./dist/libretranslate_cuda/_internal/libretranslate/static/
+        mkdir -p ./dist/libretranslate_cuda/_internal/libretranslate/templates/
+        cp -r ./libretranslate/templates/ ./dist/libretranslate_cuda/_internal/libretranslate/templates/
+        chmod 777 ./dist/libretranslate_cuda/libretranslate_cuda
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: 'Linux Artifacts (CUDA)'
+        path: 'dist/libretranslate_cuda/'
