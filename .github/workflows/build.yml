@@ -172,7 +172,7 @@ jobs:
       run: |
         pip install .
         pip install pyinstaller
-        pip install "numpy==1.21.0"
+        pip install "numpy==1.24.0"
         pip install torch==2.3.1+cu121 -f https://download.pytorch.org/whl/torch_stable.html
 
     - name: Free Disk Space (Ubuntu)
