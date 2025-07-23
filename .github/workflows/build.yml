@@ -170,6 +170,11 @@ jobs:
         python-version: '3.8'
     - name: Install dependencies
       run: |
+        pip uninstall numpy
+        pip uninstall .
+        pip uninstall pyinstaller
+        pip uninstall torch
+
         pip install .
         pip install numpy==1.23.0
         pip install pyinstaller
